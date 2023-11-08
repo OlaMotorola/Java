@@ -1,2 +1,2 @@
-# java2023public
-Lab for Java
+# Java2023
+Aleksandra Zając
