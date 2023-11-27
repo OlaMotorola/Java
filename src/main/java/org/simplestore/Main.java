@@ -8,7 +8,7 @@ import org.simplestore.util.InventoryLoader;
 public class Main {
     public static void main(String[] args) {
         Inventory inventory = new Inventory();
-        InventoryLoader.loadInventory("path/to/inventory.txt", inventory);  // Uwaga: zmień na właściwą ścieżkę (przykładowy plik znajduje się w zasobach projektu)
+        InventoryLoader.loadInventory("src/main/resources/inventory.txt", inventory);
 
 
         ShoppingCart cart1 = new ShoppingCart(inventory);
