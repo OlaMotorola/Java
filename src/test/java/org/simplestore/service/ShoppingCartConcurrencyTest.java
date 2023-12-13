@@ -5,7 +5,12 @@ import org.simplestore.model.Inventory;
 import org.simplestore.model.Product;
 import org.simplestore.model.ProductNotFoundException;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
 
 public class ShoppingCartConcurrencyTest {
     private final Inventory inventory = new Inventory();
@@ -15,54 +20,30 @@ public class ShoppingCartConcurrencyTest {
         ShoppingCart shoppingCart = new ShoppingCart(inventory);
         inventory.addProduct(new Product(1, "Test Product", 10.0));
 
-        Object lock = new Object();
-        int[] addedCount = {0};
-        int[] removedCount = {0};
+        int threadsCount = 10;
+        int addItemsPerThread = 10;
+        int removeItemsPerThread = 5;
 
-        // Add items concurrently
-        for (int i = 0; i < 10; i++) {
-            new Thread(() -> {
-                synchronized (lock) {
-                    for (int j = 0; j < 10; j++) {
-                        shoppingCart.addItem(1, 1);
-                        addedCount[0]++;
-                        lock.notify();
-                        try {
-                            lock.wait();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    lock.notify();
+        ExecutorService executorService = Executors.newFixedThreadPool(threadsCount * 2);
+
+        for (int i = 0; i < threadsCount; i++) {
+            executorService.submit(() -> {
+                for (int j = 0; j < addItemsPerThread; j++) {
+                    shoppingCart.addItem(1, 1);
                 }
-            }).start();
-        }
+            });
 
-        // Remove items concurrently
-        for (int i = 0; i < 10; i++) {
-            new Thread(() -> {
-                synchronized (lock) {
-                    while (removedCount[0] < addedCount[0] / 2) {
-                        shoppingCart.removeItem(1, 1);
-                        removedCount[0]++;
-                        lock.notify();
-                        try {
-                            lock.wait();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    lock.notify();
+            executorService.submit(() -> {
+                for (int j = 0; j < removeItemsPerThread; j++) {
+                    shoppingCart.removeItem(1, 1);
                 }
-            }).start();
+            });
         }
 
-        Thread.sleep(100); // Give some time for threads to finish
-        synchronized (lock) {
-            lock.notifyAll(); // Notify waiting threads to finish
-        }
+        executorService.shutdown();
+        executorService.awaitTermination(10, TimeUnit.SECONDS);
 
-        // Check if the final quantity is as expected
+
         assertEquals(50, shoppingCart.getItemQuantity(1));
     }
 
@@ -71,34 +52,22 @@ public class ShoppingCartConcurrencyTest {
         ShoppingCart shoppingCart = new ShoppingCart(inventory);
         inventory.addProduct(new Product(1, "Test Product", 10.0));
 
-        Object lock = new Object();
-        int[] addedCount = {0};
+        int threadsCount = 10;
+        int addItemsPerThread = 10;
 
-        // Add items concurrently
-        for (int i = 0; i < 10; i++) {
-            new Thread(() -> {
-                synchronized (lock) {
-                    for (int j = 0; j < 10; j++) {
-                        shoppingCart.addItem(1, 1);
-                        addedCount[0]++;
-                        lock.notify();
-                        try {
-                            lock.wait();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    lock.notify();
+        ExecutorService executorService = Executors.newFixedThreadPool(threadsCount);
+
+        for (int i = 0; i < threadsCount; i++) {
+            executorService.submit(() -> {
+                for (int j = 0; j < addItemsPerThread; j++) {
+                    shoppingCart.addItem(1, 1);
                 }
-            }).start();
+            });
         }
 
-        Thread.sleep(100); // Give some time for threads to finish
-        synchronized (lock) {
-            lock.notifyAll(); // Notify waiting threads to finish
-        }
+        executorService.shutdown();
+        executorService.awaitTermination(10, TimeUnit.SECONDS);
 
-        // Check if the total cost calculation is correct
         assertEquals(1000.0, shoppingCart.calculateTotalCost());
     }
 }

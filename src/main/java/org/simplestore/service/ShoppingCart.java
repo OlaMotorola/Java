@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ShoppingCart {
-
     private final Inventory inventory;
     private final Map<Integer, Integer> cartItems = new HashMap<>();
 
@@ -16,19 +15,20 @@ public class ShoppingCart {
         this.inventory = inventory;
     }
 
-    public void addItem(int productId, int quantity) {
-        cartItems.merge(productId, quantity, Integer::sum);  // Equivalent of lambda (a, b) -> Integer.sum(a, b)
+    public synchronized void addItem(int productId, int quantity) {
+        cartItems.merge(productId, quantity, Integer::sum);
     }
 
-    public void removeItem(int productId, int quantity) {
-        cartItems.computeIfPresent(productId, (key, value) -> value > quantity ? value - quantity : 0);
+    public synchronized void removeItem(int productId, int quantity) {
+        cartItems.computeIfPresent(productId, (key, value) -> value > quantity ? value - quantity : null);
     }
 
-    public int getItemQuantity(int productId) {
+
+    public synchronized int getItemQuantity(int productId) {
         return cartItems.getOrDefault(productId, 0);
     }
 
-    public double calculateTotalCost() throws ProductNotFoundException {
+    public synchronized double calculateTotalCost() throws ProductNotFoundException {
         double totalPrice = 0;
         for (Map.Entry<Integer, Integer> entry : cartItems.entrySet()) {
             int productId = entry.getKey();
@@ -44,9 +44,7 @@ public class ShoppingCart {
         return totalPrice;
     }
 
-    public void clearCart() {
+    public synchronized void clearCart() {
         cartItems.clear();
     }
-
-
 }
